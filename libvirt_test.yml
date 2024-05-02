@@ -1,0 +1,44 @@
+---
+- name: List virtual machines running on libvirt hypervisors
+  hosts: the-spy-desktop
+  gather_facts: true
+
+  tasks:
+    - name: Install packages required for libvirt
+      become: true
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      notify: Start libvirt service
+      loop:
+        - virt-install
+        - qemu-kvm
+        - libvirt
+        - guestfs-tools
+        - python3-libguestfs
+        - python3-pip
+        - python3-libvirt
+
+    - name: Ensure libvirt-python is installed
+      ansible.builtin.pip:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - wheel
+        - libvirt-python
+
+    - name: Add user to libvirt group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups:
+          - libvirt
+        append: true
+
+    - name: Get libvirt information
+      community.libvirt.virt:
+        command: list_vms
+      register: vms_result
+
+    - name: Display list of vms
+      ansible.builtin.debug:
+        var: vms_result
